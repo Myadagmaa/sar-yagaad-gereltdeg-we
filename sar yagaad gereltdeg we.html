@@ -1,0 +1,1006 @@
+<!DOCTYPE html>
+<html lang="mn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Сар яагаад гэрэлтдэг вэ? - Интерактив багийн тоглоом</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts Inter & Roboto -->
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        space: {
+                            dark: '#0B0D1B',
+                            card: '#161936',
+                            accent: '#4F46E5',
+                            gold: '#F59E0B'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Roboto', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background: radial-gradient(circle at center, #1b2735 0%, #090a0f 100%);
+            color: #ffffff;
+            font-family: 'Roboto', sans-serif;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .star-field {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .glass-panel {
+            background: rgba(22, 25, 54, 0.85);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        }
+
+        .rocket-glow-0 { filter: drop-shadow(0 0 10px #3B82F6); }
+        .rocket-glow-1 { filter: drop-shadow(0 0 10px #EF4444); }
+        .rocket-glow-2 { filter: drop-shadow(0 0 10px #10B981); }
+        .rocket-glow-3 { filter: drop-shadow(0 0 10px #F59E0B); }
+
+        @keyframes pulse-glow {
+            0%, 100% { opacity: 0.8; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.05); }
+        }
+
+        .moon-glow {
+            animation: pulse-glow 4s infinite ease-in-out;
+        }
+
+        @keyframes rocket-float {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-6px) rotate(2deg); }
+        }
+
+        .animated-rocket {
+            animation: rocket-float 2.5s infinite ease-in-out;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.2);
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body class="relative flex flex-col min-h-screen">
+    <canvas id="starsCanvas" class="star-field"></canvas>
+
+    <div class="relative z-10 flex flex-col min-h-screen max-w-7xl mx-auto w-full px-4 py-4 sm:px-6 lg:px-8">
+        
+        <header class="flex flex-col md:flex-row justify-between items-center mb-4 glass-panel rounded-2xl p-4 gap-4">
+            <div class="flex items-center gap-3">
+                <div class="w-12 h-12 rounded-full bg-yellow-400/20 flex items-center justify-center text-yellow-300 text-2xl moon-glow">
+                    <i class="fa-solid fa-moon"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl md:text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-200 via-yellow-400 to-amber-500">
+                        Сар яагаад гэрэлтдэг вэ?
+                    </h1>
+                    <p class="text-xs sm:text-sm text-slate-300 font-medium">5-р анги | Хүн ба байгаль | Багийн интерактив тэмцээн</p>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-2 flex-wrap justify-center">
+                <button id="simBtn" onclick="openSimModal()" class="px-3 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs sm:text-sm font-semibold transition flex items-center gap-2 shadow-lg shadow-indigo-600/30">
+                    <i class="fa-solid fa-sun"></i> <span>Сарны загварчлал</span>
+                </button>
+                <button id="soundToggle" onclick="toggleSound()" class="p-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-sm transition">
+                    <i class="fa-solid fa-volume-high" id="soundIcon"></i>
+                </button>
+                <button onclick="openSettingsModal()" class="p-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-sm transition">
+                    <i class="fa-solid fa-gear"></i>
+                </button>
+                <button onclick="resetGamePrompt()" class="px-3 py-2 bg-rose-600/80 hover:bg-rose-600 text-white rounded-xl text-xs sm:text-sm font-semibold transition flex items-center gap-1.5">
+                    <i class="fa-solid fa-rotate-right"></i> <span>Шинэчлэх</span>
+                </button>
+            </div>
+        </header>
+
+        <div id="turnBanner" class="mb-4 glass-panel rounded-xl p-3 flex flex-wrap items-center justify-between gap-3 border-l-4 border-blue-500 transition-all duration-300">
+            <div class="flex items-center gap-3">
+                <div id="turnBadge" class="px-3 py-1 bg-blue-500 text-white font-bold rounded-lg text-sm flex items-center gap-2">
+                    <i id="turnRocketIcon" class="fa-solid fa-rocket"></i> <span id="turnTeamName">1-р баг</span>
+                </div>
+                <span class="text-sm sm:text-base font-semibold text-slate-200" id="turnInstruction">
+                    Асуултад хариулж сансрын хөлгөө сар руу ойртууларай!
+                </span>
+            </div>
+            <div class="flex items-center gap-4 text-xs sm:text-sm text-slate-300">
+                <div>Даалгавар: <span id="questionCounter" class="font-bold text-yellow-400">1 / 15</span></div>
+                <div>Зорилго: <span class="font-bold text-emerald-400">4 Алхам = Сар</span></div>
+            </div>
+        </div>
+
+        <div class="glass-panel rounded-2xl p-4 sm:p-6 mb-6">
+            <div class="flex justify-between items-center mb-3">
+                <h2 class="text-sm font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2">
+                    <i class="fa-solid fa-route text-indigo-400"></i> Багуудын саран дээр буух аялал
+                </h2>
+                <span class="text-xs text-slate-400">Эхлэл: Дэлхий ➔ Бардамнал: Сар</span>
+            </div>
+
+            <!-- Teams track list -->
+            <div id="teamsTrackContainer" class="space-y-4">
+                <!-- Dynamically generated via JS -->
+            </div>
+        </div>
+
+        <main class="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6 mb-6">
+            
+            <!-- Left/Main: Active Question Box -->
+            <div class="lg:col-span-8 flex flex-col">
+                <div id="questionBox" class="glass-panel rounded-2xl p-5 sm:p-6 flex-1 flex flex-col justify-between border-t-2 border-indigo-500">
+                    <div>
+                        <!-- Question header category tag -->
+                        <div class="flex justify-between items-center mb-4">
+                            <span id="questionTag" class="px-3 py-1 bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 text-xs font-semibold rounded-full">
+                                Хүн ба байгаль: Сар ба Нарны гэрэл
+                            </span>
+                            <span id="questionDifficulty" class="text-xs text-amber-400 font-bold flex items-center gap-1">
+                                <i class="fa-solid fa-star"></i> 100 оноо
+                            </span>
+                        </div>
+
+                        <!-- Question text -->
+                        <h3 id="questionText" class="text-lg sm:text-xl font-bold text-white mb-6 leading-relaxed">
+                            Асуулт ачаалж байна...
+                        </h3>
+
+                        <!-- Answer choices grid -->
+                        <div id="answersGrid" class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+                            <!-- Answer buttons generated dynamically -->
+                        </div>
+                    </div>
+
+                    <!-- Explanation banner after answer -->
+                    <div id="explanationBox" class="hidden mt-4 p-4 rounded-xl bg-slate-900/90 border border-slate-700 text-sm">
+                        <div id="explanationResult" class="font-bold mb-1 flex items-center gap-2"></div>
+                        <p id="explanationText" class="text-slate-300 text-xs sm:text-sm"></p>
+                        <button id="nextQuestionBtn" onclick="nextTurn()" class="mt-3 px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-sm transition flex items-center gap-2 ml-auto shadow-lg shadow-emerald-600/30">
+                            <span>Дараагийн багийн ээлж</span> <i class="fa-solid fa-arrow-right"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right: Dynamic Scoreboard & Quick Science Tip -->
+            <div class="lg:col-span-4 flex flex-col gap-6">
+                <!-- Scoreboard -->
+                <div class="glass-panel rounded-2xl p-5">
+                    <h3 class="text-base font-bold text-white mb-4 flex items-center justify-between">
+                        <span><i class="fa-solid fa-trophy text-yellow-400 mr-2"></i> Онууд & Зэрэг</span>
+                        <span class="text-xs font-normal text-slate-400">4 Баг</span>
+                    </h3>
+                    <div id="scoreboardList" class="space-y-3">
+                        <!-- Scoreboard rows dynamically populated -->
+                    </div>
+                </div>
+
+                <!-- Science Key Concept Box -->
+                <div class="glass-panel rounded-2xl p-5 bg-gradient-to-br from-indigo-950/40 to-purple-950/40 flex-1">
+                    <h4 class="text-sm font-bold text-yellow-300 mb-2 flex items-center gap-2">
+                        <i class="fa-solid fa-lightbulb"></i> Сарны тухай санамж:
+                    </h4>
+                    <ul class="text-xs text-slate-300 space-y-2 list-disc list-inside">
+                        <li>Сар нь өөрөөсөө гэрэл цацруулдаггүй, Нарны гэрлийг толь шиг ойлгодог.</li>
+                        <li>Сар Дэлхийг тойрох явцад Нарны гэрэл тусах хэсэг нь бидэнд янз бүрээр харагддаг (Сарны хэлбэрүүд).</li>
+                        <li>Сарны гадаргуу дээрх тогоонууд нь солир мөргөлдсөнөөс үүссэн.</li>
+                    </ul>
+                </div>
+            </div>
+        </main>
+
+        <footer class="mt-auto py-3 text-center text-xs text-slate-400 border-t border-slate-800">
+            5-р ангийн "Хүн ба байгаль" хичээлд зориулсан сургалтын интерактив үзүүлэн болон тоглоом.
+        </footer>
+    </div>
+
+    
+    <!-- 1. Interactive Simulation Modal -->
+    <div id="simModal" class="fixed inset-0 bg-black/80 backdrop-blur-md hidden z-50 flex items-center justify-center p-4">
+        <div class="glass-panel rounded-2xl max-w-3xl w-full p-6 flex flex-col gap-4 border border-indigo-500/30 max-h-[90vh] overflow-y-auto custom-scrollbar">
+            <div class="flex justify-between items-center border-b border-slate-700 pb-3">
+                <h3 class="text-lg font-bold text-yellow-300 flex items-center gap-2">
+                    <i class="fa-solid fa-sun text-yellow-400"></i> Сар Нарны гэрлийг хэрхэн ойлгодог вэ? (Загварчлал)
+                </h3>
+                <button onclick="closeSimModal()" class="text-slate-400 hover:text-white text-xl"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            
+            <p class="text-xs sm:text-sm text-slate-300">
+                Сар нь өөрөөсөө гэрэл гаргадаггүй. Нарны цацраг Сарны гадаргууд тусаж, Дэлхий рүү буцаж ойсноор бидэнд Сар гэрэлтэж байгаа мэт харагддаг!
+            </p>
+
+            <!-- Simulation Canvas -->
+            <div class="relative w-full bg-slate-950 rounded-xl overflow-hidden border border-slate-800 flex items-center justify-center p-2">
+                <canvas id="simCanvas" width="600" height="320" class="w-full max-w-full h-auto"></canvas>
+            </div>
+
+            <!-- Controls for simulation -->
+            <div class="flex flex-wrap items-center justify-between gap-3 bg-slate-900/60 p-3 rounded-xl text-xs sm:text-sm">
+                <div class="flex items-center gap-2">
+                    <label class="text-slate-300">Сарны байрлалыг өөрчлөх:</label>
+                    <input type="range" id="simAngleSlider" min="0" max="360" value="45" oninput="drawSimulation()" class="accent-indigo-500 cursor-pointer">
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="autoRotateSim()" id="simAutoBtn" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 rounded-lg text-white font-semibold">
+                        <i class="fa-solid fa-play mr-1"></i> Эргэлдэхийг харах
+                    </button>
+                </div>
+            </div>
+
+            <div class="text-xs text-slate-400 italic">
+                💡 Багшийн санамж: Нарны гэрэл хэзээ ч Сарны ар талыг бүрэн харанхуй болгодог бөгөөд зөвхөн Нар руу харсан тал нь гэрэлтдэг болохыг сурагчдад тайлбарлаарай.
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. Settings / Edit Teams Modal -->
+    <div id="settingsModal" class="fixed inset-0 bg-black/80 backdrop-blur-md hidden z-50 flex items-center justify-center p-4">
+        <div class="glass-panel rounded-2xl max-w-md w-full p-6 border border-slate-700">
+            <div class="flex justify-between items-center mb-4 border-b border-slate-700 pb-2">
+                <h3 class="text-lg font-bold text-white"><i class="fa-solid fa-users-gear mr-2 text-indigo-400"></i>Багуудын нэрийг тохируулах</h3>
+                <button onclick="closeSettingsModal()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            
+            <div id="teamNameInputs" class="space-y-3 mb-5">
+                <!-- Inputs generated dynamically -->
+            </div>
+
+            <div class="flex justify-end gap-2">
+                <button onclick="closeSettingsModal()" class="px-4 py-2 bg-slate-700 text-slate-200 rounded-xl text-sm">Хаах</button>
+                <button onclick="saveTeamNames()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl text-sm">Хадгалах</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. Winner Victory Celebration Modal -->
+    <div id="winnerModal" class="fixed inset-0 bg-black/90 backdrop-blur-lg hidden z-50 flex items-center justify-center p-4">
+        <div class="glass-panel rounded-3xl max-w-lg w-full p-8 border-2 border-yellow-400/50 text-center relative overflow-hidden">
+            <div class="absolute -top-10 -right-10 w-40 h-40 bg-yellow-400/20 rounded-full blur-2xl"></div>
+            
+            <div class="w-20 h-20 mx-auto mb-4 bg-yellow-400/20 text-yellow-300 rounded-full flex items-center justify-center text-4xl animate-bounce">
+                <i class="fa-solid fa-trophy"></i>
+            </div>
+
+            <span class="text-xs font-bold tracking-widest text-yellow-400 uppercase">БАЯР ХҮРГЭЕ!</span>
+            <h2 id="winnerTeamTitle" class="text-2xl sm:text-3xl font-black text-white mt-1 mb-2">1-р баг Саран дээр амжилттай буулаа!</h2>
+            <p id="winnerDesc" class="text-slate-300 text-sm mb-6">
+                Сансрын хөлгөө саран дээр хамгийн түрүүнд амжилттай буулгаж, сансрын аяллын ялагч боллоо!
+            </p>
+
+            <div class="bg-slate-900/80 p-4 rounded-2xl mb-6 border border-slate-800">
+                <h4 class="text-xs text-slate-400 mb-2 font-semibold">ЭЦСИЙН САНСРЫН ҮНЭЛГЭЭ</h4>
+                <div id="finalScoresList" class="space-y-2 text-sm text-left"></div>
+            </div>
+
+            <button onclick="restartGame()" class="w-full py-3.5 bg-gradient-to-r from-yellow-500 to-amber-600 hover:from-yellow-400 hover:to-amber-500 text-slate-950 font-black rounded-xl text-base transition shadow-lg shadow-yellow-500/30 flex items-center justify-center gap-2">
+                <i class="fa-solid fa-play"></i> <span>Шинэ тоглоом эхлүүлэх</span>
+            </button>
+        </div>
+    </div>
+
+    <script>
+        
+        // Web Audio API Sound Synthesizer (No external assets required)
+        let audioCtx = null;
+        let soundEnabled = true;
+
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+        }
+
+        function playSound(type) {
+            if (!soundEnabled) return;
+            initAudio();
+            if (!audioCtx) return;
+
+            const now = audioCtx.currentTime;
+            
+            if (type === 'correct') {
+                // High cheerful double chime
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(523.25, now); // C5
+                osc.frequency.exponentialRampToValueAtTime(659.25, now + 0.15); // E5
+                osc.frequency.exponentialRampToValueAtTime(783.99, now + 0.3); // G5
+                gain.gain.setValueAtTime(0.3, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start(now);
+                osc.stop(now + 0.4);
+            } else if (type === 'wrong') {
+                // Low buzz
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(220, now); // A3
+                osc.frequency.setValueAtTime(150, now + 0.15);
+                gain.gain.setValueAtTime(0.3, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.35);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start(now);
+                osc.stop(now + 0.35);
+            } else if (type === 'boost') {
+                // Rocket thrust sound
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(150, now);
+                osc.frequency.exponentialRampToValueAtTime(400, now + 0.3);
+                gain.gain.setValueAtTime(0.2, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start(now);
+                osc.stop(now + 0.3);
+            } else if (type === 'fanfare') {
+                // Victory fanfare
+                [261.63, 329.63, 392.00, 523.25].forEach((freq, idx) => {
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    osc.type = 'triangle';
+                    osc.frequency.value = freq;
+                    gain.gain.setValueAtTime(0.2, now + idx * 0.12);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.12 + 0.3);
+                    osc.connect(gain);
+                    gain.connect(audioCtx.destination);
+                    osc.start(now + idx * 0.12);
+                    osc.stop(now + idx * 0.12 + 0.3);
+                });
+            }
+        }
+
+        function toggleSound() {
+            soundEnabled = !soundEnabled;
+            const icon = document.getElementById('soundIcon');
+            if (soundEnabled) {
+                icon.className = 'fa-solid fa-volume-high';
+            } else {
+                icon.className = 'fa-solid fa-volume-xmark text-rose-400';
+            }
+        }
+
+        const questionBank = [
+            {
+                question: "Сар яагаад шөнө гэрэлтэж харагддаг вэ?",
+                options: [
+                    "Сар өөрөөсөө их хэмжээний гэрэл цацруулдаг тул",
+                    "Наран дээрх галыг ойлгож байгаа тул",
+                    "Нарны гэрэл Сарны гадаргуу дээр тусаж ойдог тул",
+                    "Дэлхийн агаар мандал Сарыг гэрэлтүүлдэг тул"
+                ],
+                correct: 2,
+                explanation: "Зөв! Сар нь одон биет шиг өөрөөсөө гэрэл цацруулдаггүй. Нарны гэрэл Сарны саарал гадаргууд тусаж, Дэлхий рүү ойж ирснээр бидэнд гэрэлтэж харагддаг."
+            },
+            {
+                question: "Сар өөрөөсөө гэрэл гаргадаг од мөн үү?",
+                options: [
+                    "Мөн, Сар бол жижиг одон биет",
+                    "Биш, Сар бол Дэлхийн байгалийн дагуул планетоид юм",
+                    "Мөн, шөнө бүр гэрэлтдэг тул",
+                    "Биш, Сар бол хиймэл дагуул юм"
+                ],
+                correct: 1,
+                explanation: "Зөв! Сар бол од биш, харин Дэлхийг тойрон эргэдэг байгалийн дагуул биет юм."
+            },
+            {
+                question: "Сарны аль хэсэг нь үргэлж гэрэлтэй байдаг вэ?",
+                options: [
+                    "Дэлхий рүү харсан тал нь",
+                    "Сарны өмнөд туйл нь",
+                    "Нар руу харж буй тал нь",
+                    "Сарны дотор тал нь"
+                ],
+                correct: 2,
+                explanation: "Яг зөв! Сарны Нар руу харсан тал нь үргэлж Нарны гэрлийг ойлгон гэрэлтэж байдаг. Харин Нарны эсрэг тал нь харанхуй байдаг."
+            },
+            {
+                question: "Сар яагаад заримдаа бүтэн, заримдаа тал эсвэл хавирган сар болж харагддаг вэ?",
+                options: [
+                    "Сар жижгэрч, томордог тул",
+                    "Сар Дэлхийг тойрох үед гэрэлтсэн хэсгийн зарим нь л бидэнд харагддаг тул",
+                    "Үүл Сарыг халхалдаг тул",
+                    "Сарны гэрэл унтарч асдаг тул"
+                ],
+                correct: 1,
+                explanation: "Зөв хариуллаа! Сар Дэлхийг тойрон эргэх үед бид Сарны Наранд гэрэлтсэн хэсгийг янз бүрийн өнцгөөс хардаг тул Сарны хэлбэрүүд (фаз) үүсдэг."
+            },
+            {
+                question: "Сарны гадаргуу дээрх олон дугуй тогоонууд (кратер) яаж үүссэн бэ?",
+                options: [
+                    "Сансрын хөлөг буухад үүссэн",
+                    "Хүчтэй салхинаас үүссэн",
+                    "Солир болон сүүлт одонтой мөргөлдсөнөөс үүссэн",
+                    "Сарны галт уул дэлбэрснээс үүссэн"
+                ],
+                correct: 2,
+                explanation: "Маш сайн! Саран дээр агаар мандал байхгүй тул сансрын солирууд шаталгүйгээр гадаргууг нь шууд мөргөж тогоо үүсгэдэг."
+            },
+            {
+                question: "Саран дээр хүн агааргүйгээр амьсгалж чадах уу?",
+                options: [
+                    "Чадна, агаартай",
+                    "Чадахгүй, агаар мандалгүй тул тусгай хувцас хэрэгтэй",
+                    "Зөвхөн шөнийн цагаар амьсгалж чадна",
+                    "Зөвхөн ус байвал чадна"
+                ],
+                correct: 1,
+                explanation: "Зөв! Саран дээр агаар, хүчилтөрөгч байхгүй тул сансрын нисгэгчид тусгай скафандр хувцас өмсдөг."
+            },
+            {
+                question: "Сар Дэлхийг бүтэн нэг тойроход ойролцоогоор хэдэн хоног зарцуулдаг вэ?",
+                options: [
+                    "1 хоног",
+                    "7 хоног",
+                    "27-29 хоног (Ойролцоогоор 1 сар)",
+                    "365 хоног"
+                ],
+                correct: 2,
+                explanation: "Зөв! Сар Дэлхийг ойролцоогоор нэг сарын хугацаанд (27.3 - 29.5 хоногт) нэг удаа бүтэн тойрдог."
+            },
+            {
+                question: "Дэлхий ба Сарны татах хүчийг харьцуулвал ямар байх вэ?",
+                options: [
+                    "Сарны татах хүч Дэлхийгээс 6 дахин бага",
+                    "Сарны татах хүч Дэлхийгээс 10 дахин их",
+                    "Тэнцүү татах хүчтэй",
+                    "Саран дээр татах хүч огт байхгүй"
+                ],
+                correct: 0,
+                explanation: "Зөв! Сар Дэлхийгээс жижиг тул татах хүч нь Дэлхийгээс 6 дахин бага байдаг. Тиймээс Саран дээр их өндөр дүүлэн өдөрж болдог!"
+            },
+            {
+                question: "Сар Нар ба Дэлхий хоёрын шууд хооронд орж Нарны гэрлийг хаахад ямар үзэгдэл болох вэ?",
+                options: [
+                    "Сарны барилт",
+                    "Нарны барилт",
+                    "Цусан сар үүсэх",
+                    "Одод унах"
+                ],
+                correct: 1,
+                explanation: "Яг зөв! Сар Нар болон Дэлхийн хооронд чигээрээ ирэх үед Сарны сүүдэр Дэлхий дээр тусч Нарны барилт тохиолддог."
+            },
+            {
+                question: "Сарны гадаргуу Нарны гэрлийн ойролцоогоор хэдэн хувийг ойлгодог вэ?",
+                options: [
+                    "100% (Толь шиг)",
+                    "Ойролцоогоор 12% (Харанхуй чулуулаг тул заримыг нь шингээдэг)",
+                    "90%",
+                    "0%"
+                ],
+                correct: 1,
+                explanation: "Зөв! Сарны чулуулаг нь нүүрс мэт саарал тул туссан Нарны гэрлийн ердөө 12% орчмыг ойлгодог ч харанхуй сансарт тод харагддаг."
+            },
+            {
+                question: "Дэлхийгээс Сарны үргэлж нэг тал харагддаг уу?",
+                options: [
+                    "Тийм, Сар өөрийн тэнхлэгээ ба Дэлхийг тойрох хугацаа адилхан тул",
+                    "Үгүй, өдөр бүр өөр тал нь харагддаг",
+                    "Зөвхөн зуны улиралд 2 тал нь харагддаг",
+                    "Сар огт эргэдэггүй тул харагддаггүй"
+                ],
+                correct: 0,
+                explanation: "Маш сайн ажиглалт! Сар өөрийн тэнхлэгээ нэг эргэх хугацаа нь Дэлхийг тойрох хугацаатай тэнцүү байдаг тул Дэлхийгээс үргэлж нэг л тал нь харагддаг."
+            },
+            {
+                question: "Сарны гэрэл Дэлхийд хүрэхэд хэдий хугацаа зарцуулдаг вэ?",
+                options: [
+                    "8 минут",
+                    "Ойролцоогоор 1.3 секунд",
+                    "1 цаг",
+                    "Шууд 0 секунд"
+                ],
+                correct: 1,
+                explanation: "Зөв! Гэрлийн хурд маш хурдан (300,000 км/сек) тул Сарнаас ойсон Нарны гэрэл ердөө 1.3 секундэд Дэлхийд ирдэг."
+            }
+        ];
+
+        const TOTAL_STEPS = 4; // 0: Launch, 1: Stratosphere, 2: Orbit, 3: Approach, 4: Moon Landing
+
+        let teams = [
+            { id: 0, name: "1-р баг (Аполло)", color: "blue", bg: "bg-blue-600", text: "text-blue-400", border: "border-blue-500", step: 0, score: 0 },
+            { id: 1, name: "2-р баг (Союз)", color: "red", bg: "bg-rose-600", text: "text-rose-400", border: "border-rose-500", step: 0, score: 0 },
+            { id: 2, name: "3-р баг (Чангэ)", color: "green", bg: "bg-emerald-600", text: "text-emerald-400", border: "border-emerald-500", step: 0, score: 0 },
+            { id: 3, name: "4-р баг (Артемис)", color: "yellow", bg: "bg-amber-500", text: "text-amber-400", border: "border-amber-500", step: 0, score: 0 }
+        ];
+
+        let currentTeamIndex = 0;
+        let currentQuestionIndex = 0;
+        let isAnswered = false;
+        let questionOrder = [];
+
+        window.onload = function() {
+            initStarsCanvas();
+            shuffleQuestions();
+            renderTracks();
+            renderScoreboard();
+            loadQuestion();
+            initSimCanvas();
+        };
+
+        function shuffleQuestions() {
+            questionOrder = Array.from({ length: questionBank.length }, (_, i) => i);
+            for (let i = questionOrder.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [questionOrder[i], questionOrder[j]] = [questionOrder[j], questionOrder[i]];
+            }
+            currentQuestionIndex = 0;
+        }
+
+        function renderTracks() {
+            const container = document.getElementById('teamsTrackContainer');
+            container.innerHTML = '';
+
+            const stepNames = ["🚀 Дэлхий (Хөөрөлт)", "🌌 Агаар мандал", "🛰️ Нислэгийн зам", "🌕 Сарны орбитал", "🏳️ САРНЫ БУУДАЛ!"];
+
+            teams.forEach((team, index) => {
+                const progressPct = (team.step / TOTAL_STEPS) * 100;
+                const isCurrent = (index === currentTeamIndex);
+
+                const teamCard = document.createElement('div');
+                teamCard.className = `relative p-3 rounded-xl transition-all duration-300 ${isCurrent ? 'bg-indigo-950/70 border-2 ' + team.border : 'bg-slate-900/50 border border-slate-800'}`;
+
+                teamCard.innerHTML = `
+                    <div class="flex justify-between items-center mb-2">
+                        <div class="flex items-center gap-2">
+                            <span class="w-3 h-3 rounded-full ${team.bg}"></span>
+                            <span class="font-bold text-sm text-white ${isCurrent ? 'underline decoration-yellow-400' : ''}">${team.name}</span>
+                            ${isCurrent ? '<span class="text-xs px-2 py-0.5 bg-yellow-400/20 text-yellow-300 font-bold rounded-full animate-pulse">Одоогийн ээлж</span>' : ''}
+                        </div>
+                        <span class="text-xs font-semibold text-slate-300">
+                            ${stepNames[team.step]} (${team.step}/${TOTAL_STEPS})
+                        </span>
+                    </div>
+
+                    <!-- Track Progress Line -->
+                    <div class="relative w-full h-8 bg-slate-950 rounded-full p-1 border border-slate-800 flex items-center overflow-hidden">
+                        <!-- Step Markers -->
+                        <div class="absolute inset-0 flex justify-between items-center px-4 pointer-events-none text-[10px] text-slate-600 font-bold">
+                            <span>0%</span>
+                            <span>25%</span>
+                            <span>50%</span>
+                            <span>75%</span>
+                            <span>🌕 100%</span>
+                        </div>
+
+                        <!-- Filled bar -->
+                        <div class="h-full rounded-full transition-all duration-700 ${team.bg} opacity-30" style="width: ${Math.max(progressPct, 5)}%"></div>
+
+                        <!-- Rocket Marker -->
+                        <div class="absolute transition-all duration-700 ease-out flex items-center gap-1 rocket-glow-${team.id}" style="left: calc(${Math.min(progressPct, 92)}% + 4px);">
+                            <div class="w-7 h-7 rounded-full ${team.bg} flex items-center justify-center text-white text-xs shadow-lg animated-rocket">
+                                <i class="fa-solid fa-rocket"></i>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                container.appendChild(teamCard);
+            });
+
+            // Update header banner
+            const currentTeam = teams[currentTeamIndex];
+            const banner = document.getElementById('turnBanner');
+            const badge = document.getElementById('turnBadge');
+            
+            badge.className = `px-3 py-1 ${currentTeam.bg} text-white font-bold rounded-lg text-sm flex items-center gap-2 shadow-md`;
+            document.getElementById('turnTeamName').innerText = currentTeam.name;
+            banner.className = `mb-4 glass-panel rounded-xl p-3 flex flex-wrap items-center justify-between gap-3 border-l-4 ${currentTeam.border} transition-all duration-300`;
+            document.getElementById('questionCounter').innerText = `${currentQuestionIndex + 1} / ${questionBank.length}`;
+        }
+
+        function renderScoreboard() {
+            const container = document.getElementById('scoreboardList');
+            container.innerHTML = '';
+
+            // Sort teams by step descending, then score descending
+            const sorted = [...teams].sort((a, b) => b.step - a.step || b.score - a.score);
+
+            sorted.forEach((team, rank) => {
+                const item = document.createElement('div');
+                item.className = "flex items-center justify-between p-2.5 rounded-xl bg-slate-900/60 border border-slate-800 text-xs sm:text-sm";
+                
+                let rankBadge = `<span class="w-5 h-5 rounded-full bg-slate-800 text-slate-400 flex items-center justify-center text-xs font-bold">${rank + 1}</span>`;
+                if (rank === 0) rankBadge = `<span class="w-5 h-5 rounded-full bg-yellow-400 text-slate-950 flex items-center justify-center text-xs font-black">1</span>`;
+
+                item.innerHTML = `
+                    <div class="flex items-center gap-2">
+                        ${rankBadge}
+                        <span class="w-2.5 h-2.5 rounded-full ${team.bg}"></span>
+                        <span class="font-semibold text-slate-200">${team.name}</span>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <span class="text-xs font-medium text-emerald-400">${team.score} оноо</span>
+                        <span class="px-2 py-0.5 bg-indigo-950 text-indigo-300 rounded font-bold text-xs">${team.step}/${TOTAL_STEPS} алхам</span>
+                    </div>
+                `;
+                container.appendChild(item);
+            });
+        }
+
+        function loadQuestion() {
+            isAnswered = false;
+            document.getElementById('explanationBox').classList.add('hidden');
+
+            const qIndex = questionOrder[currentQuestionIndex % questionBank.length];
+            const qData = questionBank[qIndex];
+
+            document.getElementById('questionText').innerText = qData.question;
+
+            const grid = document.getElementById('answersGrid');
+            grid.innerHTML = '';
+
+            const optionLetters = ['A', 'B', 'C', 'D'];
+
+            qData.options.forEach((optText, i) => {
+                const btn = document.createElement('button');
+                btn.className = `p-4 rounded-xl text-left text-xs sm:text-sm font-medium bg-slate-900/80 hover:bg-indigo-900/50 border border-slate-700/80 hover:border-indigo-500 text-slate-200 hover:text-white transition-all duration-200 flex items-start gap-3 shadow-md group`;
+                btn.onclick = () => checkAnswer(i, btn);
+
+                btn.innerHTML = `
+                    <span class="w-6 h-6 rounded-lg bg-slate-800 group-hover:bg-indigo-600 text-slate-300 group-hover:text-white flex items-center justify-center font-bold text-xs shrink-0 transition">
+                        ${optionLetters[i]}
+                    </span>
+                    <span class="leading-relaxed">${optText}</span>
+                `;
+
+                grid.appendChild(btn);
+            });
+        }
+
+        function checkAnswer(selectedIndex, clickedBtn) {
+            if (isAnswered) return;
+            isAnswered = true;
+
+            const qIndex = questionOrder[currentQuestionIndex % questionBank.length];
+            const qData = questionBank[qIndex];
+            const currentTeam = teams[currentTeamIndex];
+
+            const allButtons = document.getElementById('answersGrid').children;
+            const explanationBox = document.getElementById('explanationBox');
+            const explanationResult = document.getElementById('explanationResult');
+            const explanationText = document.getElementById('explanationText');
+
+            if (selectedIndex === qData.correct) {
+                // Correct answer!
+                playSound('correct');
+                clickedBtn.className = "p-4 rounded-xl text-left text-xs sm:text-sm font-medium bg-emerald-950/80 border-2 border-emerald-500 text-emerald-200 flex items-start gap-3 shadow-lg shadow-emerald-900/30";
+                
+                explanationResult.className = "font-bold mb-1 flex items-center gap-2 text-emerald-400";
+                explanationResult.innerHTML = `<i class="fa-solid fa-circle-check text-base"></i> Маш сайн! Зөв хариуллаа. (+100 оноо & 1 Алхам урагшиллаа)`;
+                
+                // Advance team
+                currentTeam.score += 100;
+                if (currentTeam.step < TOTAL_STEPS) {
+                    currentTeam.step += 1;
+                    setTimeout(() => playSound('boost'), 400);
+                }
+
+            } else {
+                // Incorrect answer
+                playSound('wrong');
+                clickedBtn.className = "p-4 rounded-xl text-left text-xs sm:text-sm font-medium bg-rose-950/80 border-2 border-rose-500 text-rose-200 flex items-start gap-3";
+                
+                // Highlight correct button
+                allButtons[qData.correct].className = "p-4 rounded-xl text-left text-xs sm:text-sm font-medium bg-emerald-950/40 border border-emerald-500/60 text-emerald-300 flex items-start gap-3";
+
+                explanationResult.className = "font-bold mb-1 flex items-center gap-2 text-rose-400";
+                explanationResult.innerHTML = `<i class="fa-solid fa-circle-xmark text-base"></i> Буруу хариулт! Дараагийн боломжоо ашиглаарай.`;
+            }
+
+            // Disable all option buttons
+            Array.from(allButtons).forEach(btn => btn.disabled = true);
+
+            explanationText.innerText = qData.explanation;
+            explanationBox.classList.remove('hidden');
+
+            renderTracks();
+            renderScoreboard();
+
+            // Check if team won!
+            if (currentTeam.step >= TOTAL_STEPS) {
+                setTimeout(() => {
+                    triggerWinner(currentTeam);
+                }, 800);
+            }
+        }
+
+        function nextTurn() {
+            currentTeamIndex = (currentTeamIndex + 1) % teams.length;
+            currentQuestionIndex++;
+            renderTracks();
+            loadQuestion();
+        }
+
+        function triggerWinner(winningTeam) {
+            playSound('fanfare');
+            
+            document.getElementById('winnerTeamTitle').innerText = `${winningTeam.name} Саран дээр амжилттай буулаа!`;
+            
+            const scoresContainer = document.getElementById('finalScoresList');
+            scoresContainer.innerHTML = '';
+
+            const sorted = [...teams].sort((a, b) => b.step - a.step || b.score - a.score);
+            sorted.forEach((t, i) => {
+                scoresContainer.innerHTML += `
+                    <div class="flex justify-between items-center py-1 border-b border-slate-800 text-xs">
+                        <span class="font-bold text-slate-200">${i + 1}. ${t.name}</span>
+                        <span class="text-yellow-400 font-bold">${t.score} оноо (${t.step}/4 алхам)</span>
+                    </div>
+                `;
+            });
+
+            document.getElementById('winnerModal').classList.remove('hidden');
+        }
+
+        function restartGame() {
+            teams.forEach(t => {
+                t.step = 0;
+                t.score = 0;
+            });
+            currentTeamIndex = 0;
+            shuffleQuestions();
+            document.getElementById('winnerModal').classList.add('hidden');
+            renderTracks();
+            renderScoreboard();
+            loadQuestion();
+        }
+
+        function resetGamePrompt() {
+            restartGame();
+        }
+
+        function openSettingsModal() {
+            const container = document.getElementById('teamNameInputs');
+            container.innerHTML = '';
+            
+            teams.forEach((t, idx) => {
+                container.innerHTML += `
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-300 mb-1">${idx + 1}-р багийн нэр:</label>
+                        <input type="text" id="teamInput_${t.id}" value="${t.name}" class="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-white text-sm focus:outline-none focus:border-indigo-500">
+                    </div>
+                `;
+            });
+
+            document.getElementById('settingsModal').classList.remove('hidden');
+        }
+
+        function closeSettingsModal() {
+            document.getElementById('settingsModal').classList.add('hidden');
+        }
+
+        function saveTeamNames() {
+            teams.forEach(t => {
+                const val = document.getElementById(`teamInput_${t.id}`).value;
+                if (val.trim()) t.name = val.trim();
+            });
+            closeSettingsModal();
+            renderTracks();
+            renderScoreboard();
+        }
+
+        function initStarsCanvas() {
+            const canvas = document.getElementById('starsCanvas');
+            const ctx = canvas.getContext('2d');
+
+            function resize() {
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+            }
+            resize();
+            window.addEventListener('resize', resize);
+
+            const stars = Array.from({ length: 120 }, () => ({
+                x: Math.random() * window.innerWidth,
+                y: Math.random() * window.innerHeight,
+                radius: Math.random() * 1.5 + 0.5,
+                alpha: Math.random(),
+                speed: Math.random() * 0.02 + 0.005
+            }));
+
+            function animate() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                stars.forEach(star => {
+                    star.alpha += star.speed;
+                    if (star.alpha > 1 || star.alpha < 0) star.speed = -star.speed;
+
+                    ctx.fillStyle = `rgba(255, 255, 255, ${Math.abs(star.alpha)})`;
+                    ctx.beginPath();
+                    ctx.arc(star.x, star.y, star.radius, 0, Math.PI * 2);
+                    ctx.fill();
+                });
+                requestAnimationFrame(animate);
+            }
+            animate();
+        }
+
+        let simAnimId = null;
+        let isSimAutoRotating = false;
+
+        function openSimModal() {
+            document.getElementById('simModal').classList.remove('hidden');
+            drawSimulation();
+        }
+
+        function closeSimModal() {
+            document.getElementById('simModal').classList.add('hidden');
+            if (isSimAutoRotating) autoRotateSim();
+        }
+
+        function autoRotateSim() {
+            isSimAutoRotating = !isSimAutoRotating;
+            const btn = document.getElementById('simAutoBtn');
+            if (isSimAutoRotating) {
+                btn.innerHTML = `<i class="fa-solid fa-pause mr-1"></i> Зөгнөлийг зогсоох`;
+                btn.className = "px-3 py-1.5 bg-amber-600 hover:bg-amber-500 rounded-lg text-white font-semibold";
+                
+                function loop() {
+                    if (!isSimAutoRotating) return;
+                    const slider = document.getElementById('simAngleSlider');
+                    slider.value = (parseFloat(slider.value) + 1) % 360;
+                    drawSimulation();
+                    simAnimId = requestAnimationFrame(loop);
+                }
+                loop();
+            } else {
+                btn.innerHTML = `<i class="fa-solid fa-play mr-1"></i> Эргэлдэхийг харах`;
+                btn.className = "px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 rounded-lg text-white font-semibold";
+                cancelAnimationFrame(simAnimId);
+            }
+        }
+
+        function initSimCanvas() {
+            drawSimulation();
+        }
+
+        function drawSimulation() {
+            const canvas = document.getElementById('simCanvas');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            const w = canvas.width;
+            const h = canvas.height;
+
+            ctx.clearRect(0, 0, w, h);
+
+            const earthX = w / 2;
+            const earthY = h / 2;
+            const orbitRadius = 110;
+
+            const angleDeg = parseFloat(document.getElementById('simAngleSlider').value);
+            const angleRad = (angleDeg * Math.PI) / 180;
+
+            const moonX = earthX + orbitRadius * Math.cos(angleRad);
+            const moonY = earthY + orbitRadius * Math.sin(angleRad);
+
+            // Draw Sun Rays from the Left side
+            ctx.strokeStyle = "rgba(251, 191, 36, 0.25)";
+            ctx.lineWidth = 1.5;
+            for (let y = 30; y < h; y += 25) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(w, y);
+                ctx.stroke();
+            }
+
+            // Draw Orbit line
+            ctx.strokeStyle = "rgba(255, 255, 255, 0.15)";
+            ctx.setLineDash([4, 4]);
+            ctx.beginPath();
+            ctx.arc(earthX, earthY, orbitRadius, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            // Draw Sun (Far Left)
+            const sunGlow = ctx.createRadialGradient(20, h/2, 5, 20, h/2, 50);
+            sunGlow.addColorStop(0, '#FBBF24');
+            sunGlow.addColorStop(1, 'rgba(251, 191, 36, 0)');
+            ctx.fillStyle = sunGlow;
+            ctx.beginPath();
+            ctx.arc(20, h/2, 50, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.fillStyle = '#F59E0B';
+            ctx.beginPath();
+            ctx.arc(20, h/2, 25, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#FFFFFF';
+            ctx.font = 'bold 11px Roboto';
+            ctx.fillText('НАР', 12, h/2 + 4);
+
+            // Draw Earth
+            ctx.fillStyle = '#3B82F6';
+            ctx.beginPath();
+            ctx.arc(earthX, earthY, 28, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Earth continents accent
+            ctx.fillStyle = '#10B981';
+            ctx.beginPath();
+            ctx.arc(earthX - 8, earthY - 5, 10, 0, Math.PI * 2);
+            ctx.arc(earthX + 10, earthY + 8, 8, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Earth Label
+            ctx.fillStyle = '#FFFFFF';
+            ctx.font = 'bold 12px Roboto';
+            ctx.fillText('Дэлхий', earthX - 20, earthY + 45);
+
+            // Draw Reflection Ray from Sun -> Moon -> Earth
+            ctx.strokeStyle = '#FBBF24';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(20, moonY);
+            ctx.lineTo(moonX, moonY);
+            ctx.stroke();
+
+            // Reflected ray to Earth
+            ctx.strokeStyle = '#60A5FA';
+            ctx.setLineDash([3, 3]);
+            ctx.beginPath();
+            ctx.moveTo(moonX, moonY);
+            ctx.lineTo(earthX, earthY);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            // Draw Moon (Split Light / Dark hemisphere)
+            ctx.save();
+            ctx.translate(moonX, moonY);
+
+            // Light half (facing left toward Sun)
+            ctx.fillStyle = '#FEF08A';
+            ctx.beginPath();
+            ctx.arc(0, 0, 14, Math.PI * 0.5, Math.PI * 1.5);
+            ctx.fill();
+
+            // Dark half (facing right away from Sun)
+            ctx.fillStyle = '#334155';
+            ctx.beginPath();
+            ctx.arc(0, 0, 14, Math.PI * 1.5, Math.PI * 0.5);
+            ctx.fill();
+
+            ctx.restore();
+
+            // Moon label
+            ctx.fillStyle = '#FDE047';
+            ctx.font = 'bold 11px Roboto';
+            ctx.fillText('Сар', moonX - 10, moonY - 20);
+        }
+    </script>
+</body>
+</html>
